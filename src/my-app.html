@@ -10,16 +10,45 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
 <link rel="import" href="../bower_components/app-route/app-route.html">
 <link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="my-icons.html">
 <link rel="import" href="blank-element.html">
+<link rel="import" href="shop-item.html">
+<link rel="import" href="cart-data.html">
+
 
 <dom-module id="my-app">
   <template>
     <style>
       :host {
         display: block;
+      }
+
+      .cart-badge {
+        position: absolute;
+        top: -2px;
+        right: 0;
+        width: 20px;
+        height: 20px;
+        background-color: black;
+        border-radius: 50%;
+        color: white;
+        font-size: 12px;
+        font-weight: 500;
+        pointer-events: none;
+        @apply(--layout-vertical);
+        @apply(--layout-center-center);
+      }
+
+      .cart-btn-container {
+        position: relative;
+        width: 40px;
       }
     </style>
 
@@ -30,6 +59,36 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         data="{{routeData}}"
         tail="{{subroute}}"></app-route>
 
+        <cart-data
+          id="cart"
+          cart="{{cart}}"
+          num-items="{{numItems}}"
+          total="{{total}}">
+        </cart-data>
+
+        <app-header role="navigation" id="header" effects="waterfall" condenses reveals>
+          <app-toolbar>
+            <div class="left-bar-item">
+              <paper-icon-button
+                  class="menu-btn"
+                  icon="menu"
+                  on-click="_toggleDrawer"
+                  aria-label="Categories">
+              </paper-icon-button>
+              <a class="back-btn" href="/list/[[categoryName]]" tabindex="-1">
+                <paper-icon-button icon="arrow-back" aria-label="Go back"></paper-icon-button>
+              </a>
+            </div>
+            <div class="logo" main-title><a href="/" aria-label="SHOP Home">SHOP</a></div>
+            <div class="cart-btn-container">
+              <a href="/cart" tabindex="-1">
+                <paper-icon-button icon="shopping-cart" aria-label$="Shopping cart: [[_computePluralizedQuantity(numItems)]]"></paper-icon-button>
+              </a>
+              <div class="cart-badge" aria-hidden="true" hidden$="[[!numItems]]">[[numItems]]</div>
+            </div>
+          </app-toolbar>
+        </app-header>
+
         <!-- Header Content -->
         <iron-pages
             selected="[[page]]"
@@ -38,7 +97,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             role="main">
 
           <blank-element id="home"></blank-element>
-        
+          <!-- total cart from cart data -->
+          <shop-item id="item" route="[[subroute]]" offline="[[offline]]"></shop-detail>
+
         </iron-pages>
      
   </template>
@@ -48,6 +109,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       is: 'my-app',
 
       properties: {
+        numItems: {
+          type: Number,
+          value: 0
+        },
+
         page: {
           type: String,
           reflectToAttribute: true,
@@ -55,9 +121,37 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         },
       },
 
+      attached: function() {
+        console.log(this.$);
+      },
+
       observers: [
         '_routePageChanged(routeData.page)',
       ],
+
+      listeners: {
+        'add-cart-item': '_onAddCartItem',
+        'clear-cart': '_clearCart'        
+      },
+
+      _onAddCartItem: function(event) {
+        // if (!this._cartModal) {
+          // this._cartModal = document.createElement('shop-cart-modal');
+          // Polymer.dom(this.root).appendChild(this._cartModal);
+        // }
+        this.$.cart.addItem(event.detail);
+        console.log('added');
+        // this._cartModal.open();
+        // this._announce('Item added to the cart');
+      },
+
+      _clearCart: function(event) {
+        this.$.cart.clearCart();
+      },
+
+       _computePluralizedQuantity: function(quantity) {
+        return quantity + ' ' + (quantity === 1 ? 'item' : 'items');
+      },
 
       _routePageChanged: function(page) {
         this.page = page || 'home';
@@ -65,7 +159,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _pageChanged: function(page) {
         // Load page import on demand. Show 404 page if fails
-        var resolvedPageUrl = this.resolveUrl(page + '-page.html');
+        var resolvedPageUrl = this.resolveUrl('shop-' + page + '.html');
         this.importHref(resolvedPageUrl, null, this._showPage404, true);
       },
 
